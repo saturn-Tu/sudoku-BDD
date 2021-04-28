@@ -9,7 +9,6 @@ cols_list = []
 blocks_list = []
 size = 0
 r_size = 0
-and_count = 0
 
 def initialLists():
   global rows_list
@@ -17,7 +16,6 @@ def initialLists():
   global blocks_list
   global size
   global r_size
-  global and_count
   # initial three list as number of size of zero
   for n in range(size):
     rows_list.append([0]*size)
@@ -39,10 +37,8 @@ def initialLists():
 def outputExactOne(vars):
   # output at lest one is true
   global expr_bdd
-  global and_count
   if len(expr_bdd) > 0:
     expr_bdd += "&"
-    and_count += 1
   expr_bdd += "("
   for n in range(len(vars)):
     var = "v"+str(vars[n])
@@ -52,7 +48,6 @@ def outputExactOne(vars):
   expr_bdd += ")"
   if len(vars) > 1:
     expr_bdd += "&"
-    and_count += 1
   # output at most one is true
   for n1 in range(len(vars)):
     for n2 in range(n1+1, len(vars)):
@@ -61,7 +56,6 @@ def outputExactOne(vars):
       expr_bdd += "(~" + var1+ "|~" + var2 + ")"
       if n1 < len(vars)-2 or n2 < len(vars)-1:
         expr_bdd += "&"
-        and_count += 1
 
 def constructCnf():
   for n in range(size):
@@ -70,15 +64,15 @@ def constructCnf():
     for row in range(size):
       row_mems = []
       skip_flg = 0
-      for m in range(size):
+      for col in range(size):
         # have pre-assigned a value, all row with same value can skip
         if rows_list[row][n] == 1:
           skip_flg = 1
           break
-        # have pre-assigned a value, skip
-        if int(sudoku[row][m]) > 0:
+        # have pre-assigned a value, continue. then check three list constraint 
+        if int(sudoku[row][col]) > 0 or cols_list[col][n] == 1 or blocks_list[int(row/r_size)][int(col/r_size)][n] == 1:
           continue
-        row_mems.append(row*size+m + var_offset+1)
+        row_mems.append(row*size+col + var_offset+1)
       # if find pre-assigned, skip adding constraint
       if skip_flg == 0 and len(row_mems) > 0:
         outputExactOne(row_mems)
@@ -86,15 +80,15 @@ def constructCnf():
     for col in range(size):
       col_mems = []
       skip_flg = 0
-      for m in range(size):
+      for row in range(size):
         # have pre-assigned a value, all row with same value can skip
         if cols_list[col][n] > 0:
           skip_flg = 1
           break
-        # have pre-assigned a value, skip
-        if int(sudoku[m][col]) > 0:
+        # have pre-assigned a value, continue. then check three list constraint 
+        if int(sudoku[row][col]) > 0 or rows_list[row][n] == 1 or blocks_list[int(row/r_size)][int(col/r_size)][n] == 1:
           continue
-        col_mems.append(m*size+col + var_offset+1)
+        col_mems.append(row*size+col + var_offset+1)
       # if find pre-assigned, skip adding constraint
       if skip_flg == 0 and len(col_mems) > 0:
         outputExactOne(col_mems)
@@ -115,8 +109,10 @@ def constructCnf():
             var_idx = var_idx + size-r_size+1
           else:
             var_idx = var_idx + 1
-          # skip continue after updating var_idx 
-          if int(sudoku[r_b*r_size+int(count/r_size)][c_b*r_size+(count%r_size)]) > 0:
+          # skip continue after updating var_idx
+          row = r_b*r_size+int(count/r_size)
+          col = c_b*r_size+(count%r_size)
+          if int(sudoku[row][col]) > 0 or rows_list[row][n] == 1 or cols_list[col][n] == 1:
             continue
           block_mems.append(pre_idx)
         # if find pre-assigned, skip adding constraint
@@ -141,7 +137,8 @@ def constructCnf():
 
 sudoku = []
 # file = open("sudoku_4x4_9.txt")
-file = open("sudoku_9x9_125.txt")
+# file = open("sudoku_9x9_125.txt")
+file = open(sys.argv[1])
 line = file.readline()
 while line:
   str1 = line.split()
@@ -150,14 +147,13 @@ while line:
 file.close()
 size = len(sudoku)
 r_size = int(math.sqrt(size))
-print(sudoku)
 initialLists()
 constructCnf()
-print("END")
-
-#print(expr_bdd)
-print("count = ", and_count)
+print(expr_bdd)
 f = expr(expr_bdd)
-print("END2")
-f = expr2bdd(f)
-print(f.satisfy_count())
+s_count = f.satisfy_count()
+print(s_count)
+
+o_file = open(sys.argv[2], "w")
+o_file.write(str(s_count))
+o_file.close()
