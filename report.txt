@@ -1,0 +1,7 @@
+Report for pyEDA - 309551070
+1. first install pyEDA by "pip install"
+2. parse sudoku file
+3. encode sudoku to CNF, should consider pre-placed answer,
+	because BDD is sensitive of clause size
+4. transform CNF to BDD by pyEDA
+5. call satisfy_count to count how many solutions
